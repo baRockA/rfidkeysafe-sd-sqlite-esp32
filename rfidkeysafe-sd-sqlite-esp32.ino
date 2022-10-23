@@ -478,8 +478,8 @@ String processor(const String &var) {
 void writeLog(String m) {
   //prepare msg with date and time
   String msg = "";
-  msg += String(day()) + "/" + String(month()) + "/" + String(year()) + " - " + String(hour()) +":"+ printDigits(minute())+":"+ printDigits(second()) + " - ";
-  msg += m;
+  msg += String(day()) + "/" + String(month()) + "/" + String(year()) + " - " + String(hour()) +":"+ String(minute())+":"+ String(second()) + " - ";
+  msg += m + "<br>";
   //prepare logFile and open in append mode
   File logFile = SD.open("/log.csv", FILE_APPEND);
   if (!logFile) {
@@ -488,14 +488,6 @@ void writeLog(String m) {
   }
   logFile.println(msg + "\n");
   logFile.close();
-}
-
-String printDigits(int digits) {
-  String d = ":";
-  // utility function for digital clock display: prints preceding colon and leading 0
-  if (digits < 10)
-    d += "0";
-  return d;
 }
 
 bool loadFromSpiffs(String path) {
