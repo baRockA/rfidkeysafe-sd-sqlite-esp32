@@ -1,3 +1,7 @@
+#include <SD.h>
+#include <sd_defines.h>
+#include <sd_diskio.h>
+
 /*
 RFID Reader keysafe code by rockypi @ make-es
 On ESP32
@@ -43,7 +47,7 @@ Admin user with id=0 in DB
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <Servo.h>
+#include <ESP32_Servo.h>
 #include <ArduinoJson.h>
 
 #define SS_PIN 5      // Pin: G5 (SDA MFRC522)
@@ -53,9 +57,12 @@ Admin user with id=0 in DB
 #define RED_LED 17    //Pin: G16 and G17 for access LEDs
 #define GREEN_LED 16
 
+#define POS_OPEN 10  //Servopositions
+#define POS_CLOSE 180
+
 //create Servo Object and variable for position
 Servo myservo;
-int pos = 0;
+int pos = 180;
 
 // create MFRC522-instance via VSPI
 MFRC522 rfid(SS_PIN, RST_PIN);
@@ -229,12 +236,13 @@ void setup() {
   db_exec_getadmin(userdb, "Select name, password from user where id = 0");
 
   myservo.attach(SERVO_PIN);
+  myservo.write(pos);
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!request->authenticate(http_username.c_str(), http_password.c_str()))
       return request->requestAuthentication();
-    request->send(SPIFFS, "/index.html", "text/html");
+    request->send(SD, "/index.html", "text/html");
   });
 
   server.on("/logout", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -314,7 +322,6 @@ void setup() {
         Serial.println("Falsche Parameter!");
         request->send(400, "text/plain", "Benutzer nicht erfolgreich hinzugefügt! Falsche Parameter!");
       }
-
     });
 
   server.on(
@@ -330,7 +337,7 @@ void setup() {
         } else {
           msg += " Erfolgreich gelöscht!";
           request->send(201, "text/plain", msg);
-          writeLog("User mit ID="+request->getParam("id")->value()+" gelöscht.");
+          writeLog("User mit ID=" + request->getParam("id")->value() + " gelöscht.");
         }
       } else {
         Serial.println("Falsche Parameter!");
@@ -360,7 +367,7 @@ void setup() {
         resp += "\",\"mail\":\"";
         resp += (const char *)sqlite3_column_text(res, 2);
         resp += "\",\"tag\":\"";
-        resp += sqlite3_column_int(res, 3);
+        resp += (const char *)sqlite3_column_text(res, 3);
         resp += "\"}";
         rec_count++;
       }
@@ -443,16 +450,16 @@ void loop() {
         //Access granted
 
         //Servotest - Anapssen und löschen
-        /*
-  myservo.write(pos);
-  pos = -90;
-  myservo.write(pos);
-  pos = 90;
-  myservo.write(pos);
-  pos = 0;
-  myservo.write(pos);
-*/
-        writeLog("Zugang erlaubt: "+ chipID);
+        if (pos == POS_OPEN) {
+          pos = POS_CLOSE;
+        } else {
+          pos = POS_OPEN;
+        }
+        myservo.write(pos);
+
+        String username = String((const char *)sqlite3_column_text(res, 1));
+        String Mail = String((const char *)sqlite3_column_text(res, 2));
+        writeLog("Zugang erlaubt: " + chipID + "-Name: " + username + "-e-Mail: " + Mail);
         digitalWrite(GREEN_LED, HIGH);
         delay(1000);
         digitalWrite(GREEN_LED, LOW);
@@ -460,13 +467,13 @@ void loop() {
       }
       if (rec_count != 1) {
         //Access denied
-        writeLog("Zugang vergeigert: "+ chipID);
+        writeLog("Zugang verweigert: " + chipID);
         digitalWrite(RED_LED, HIGH);
         delay(1000);
         digitalWrite(RED_LED, LOW);
       }
     }
-    delay(5000);
+    delay(1500);
   }
 }
 
@@ -478,7 +485,7 @@ String processor(const String &var) {
 void writeLog(String m) {
   //prepare msg with date and time
   String msg = "";
-  msg += String(day()) + "/" + String(month()) + "/" + String(year()) + " - " + String(hour()) +":"+ String(minute())+":"+ String(second()) + " - ";
+  msg += String(day()) + "/" + String(month()) + "/" + String(year()) + " - " + String(hour()) + ":" + String(minute()) + ":" + String(second()) + " - ";
   msg += m + "<br>";
   //prepare logFile and open in append mode
   File logFile = SD.open("/log.csv", FILE_APPEND);
