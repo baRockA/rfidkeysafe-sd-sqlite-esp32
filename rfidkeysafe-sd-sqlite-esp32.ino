@@ -69,7 +69,7 @@ SPIClass spiSD(HSPI);
 
 //Webserver as AccessPoint
 const char *ssid = "keysafe-AP";
-const char *password = "72Make-ES622";
+const char *password = "123456"; //Change Password
 IPAddress ip(192, 168, 42, 100);
 IPAddress gateway(192, 168, 42, 1);
 IPAddress subnet(255, 255, 255, 0);
