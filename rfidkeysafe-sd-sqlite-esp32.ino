@@ -1,3 +1,7 @@
+#include <SD.h>
+#include <sd_defines.h>
+#include <sd_diskio.h>
+
 /*
 RFID Reader keysafe code by rockypi @ make-es
 On ESP32
